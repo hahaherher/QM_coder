@@ -83,14 +83,15 @@ int main() {
     QMCoder encoder;
 
     // Example usage
-    string outstring = encoder.encode(original_img);
-    cout << outstring;
+    encoder.encode(original_img, img_name + process_type + ".qm");
+    //cout << outstring << endl << endl;
     //huffman(original_img, probability_map, img_name, process_type, false);
     //huffman(dpcm_img, dpcm_probability_map, img_name, process_type, true);
 
     //decoding
-    string uncompress_string = encoder.decode(outstring);
-    cout << uncompress_string;
+    //QMCoder decoder;
+    //string uncompress_string = decoder.decode(outstring);
+    //cout << uncompress_string;
     //unsigned long Qc = 0x0001;
     //cout << "Qc" << Qc<<endl;
     //int Qe = 0x0001;
