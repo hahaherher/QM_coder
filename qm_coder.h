@@ -86,22 +86,20 @@ private:
     int C;
     bool LPS, MPS;
     string outstring;
+
     void renorm_d(bool d);
-    void encodeMPS();
-    void encodeLPS();
+    int MSB(int interval);
+    void renorm_e(int interval);
+    void flush();
+    void changeState(int pseudo_column);
 
 public:
     QMCoder();
 
     string encode(vector<unsigned char> original_img);
-
     string decode(string compress_bitstring);
-
-
-private:
-
-
-    void changeState(int pseudo_column);
+    void afterLPS();
+    void afterMPS();
 };
 
 vector<unsigned char> read_raw_img(string file_name);

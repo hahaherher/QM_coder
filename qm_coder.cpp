@@ -26,44 +26,55 @@ string QMCoder::encode(vector<unsigned char> original_img) {
     for (auto& pixel : original_img) {
         //cout << "pixel" << int(pixel) << endl;
         //break;
-        if (int(pixel) == MPS) encodeMPS();
-        else encodeLPS();
+        if (int(pixel) == MPS) afterMPS();
+        else afterLPS();
         if (i == 3) break;
         //i++;
     }
     return outstring;
 }
 
-void QMCoder::encodeMPS() {
+
+void QMCoder::afterMPS() {
+    // the MPS probability estimate should ideally be 1-Qc
+    // the respective subintervals are then A*Qc and A*(1-Qc)
+    // the minimal value of 0.75 is for replacing the multiplacation 
+    // for 0.75 <= A < 1.5, A*Qc=Qc
+    // renormalization allow qm-coder to use fixed-precision integer arithmetic in the coding operations
+    // when Qc is of order 0.5(0x5555), the size of 
+
+    // C is unchanged
     A -= Qc;
-    if (A < 0x8000) {
-        if (A < Qc) {
-            C += A;
-            A = Qc;
+    if (A < 0x8000) {   // If renormalization is needed
+        // conditional exchange
+        if (A < Qc) {   // Prob(MPS) < Prob(LPS)
+            C += A;     // point to LPS subinterval base
+            A = Qc;     // set interval to LPS subinterval
         }
-        A <<= 1;
-        changeState(3);
-        outstring.push_back(((C & 0x8000) >> 15) + 48); //push '0' = 48 or '1' = 49
+        A <<= 1;            // renorm_e()
+        changeState(3);     // estimate_ & Qe(S)
+        outstring.push_back(MSB(C) + 48); // byte_out()   //push '0' = 48 or '1' = 49
         //cout << ((C & 0x8000) >> 15);// << " MPS " << state << endl; // Output MSB of C
-        C <<= 1;
+        C <<= 1;            // renorm_e()
     }
 }
 
-void QMCoder::encodeLPS() {
-    A -= Qc;
-    if (A >= Qc) {
-        C += A;
-        A = Qc;
+
+void QMCoder::afterLPS() {
+    A -= Qc;            // calculate MPS subinterval
+    if (A >= Qc) {      // Prob(MPS) > Prob(LPS)
+        C += A;         // point c at base of LPS subinterval
+        A = Qc;         // set interval to LPS subinterval
     }
-    A <<= 1;
-    changeState(4); //decreasing
-    outstring.push_back(((C & 0x8000) >> 15) + 48);
+    A <<= 1;            // Renormalization always needed
+    changeState(4);     //decreasing
+    outstring.push_back(MSB(C) + 48);
     //cout << ((C & 0x8000) >> 15);// << " LPS " << state << endl; // Output MSB of C
     C <<= 1;
 }
 
 void QMCoder::changeState(int pseudo_column) {
-    
+    // estimate_MPS
     //cout << int(transitions[0].increase_state);
     char column = ' ';
     //cout << pseudo_column;
@@ -77,15 +88,16 @@ void QMCoder::changeState(int pseudo_column) {
 
     if (column >= 48 && column <= 57) {
         // Update Qc according to state transition
-        // For example:
-        // Qc = 01FB(state29) and changes to 01A4(state30)
-        // Qc = 32B4(state08) and changes to 3C3D(state06)
         if (pseudo_column == 3) state += (column - 48);
         else state -= (column - 48);
         Qc = transitions[state].qc_hex;
     }
     else {
-        //cout << int(column);
+        // conditional exchange
+        // to avoid interval size inversion, the assignment of LPS and MPS to the two intervals is interchanged
+        // only occurs when 0.5 >= Qc > A-Qc
+        // both subintervals are clearly less than 0.75(0x8000), and renormalization must occur
+        // 
         //S means that MPS and LPS must exchange because we made a wrong guess
         //state = 'S';
         MPS = !MPS;
@@ -94,35 +106,10 @@ void QMCoder::changeState(int pseudo_column) {
     }
 }
 
-//coding a symbol changes the interval and code stream
-void QMCoder::afterMPS() {
-    // the MPS probability estimate should ideally be 1-Qc
-    // the respective subintervals are then A*Qc and A*(1-Qc)
-    // the minimal value of 0.75 is for replacing the multiplacation 
-    // for 0.75 <= A < 1.5, A*Qc=Qc
-    // renormalization allow qm-coder to use fixed-precision integer arithmetic in the coding operations
-    // when Qc is of order 0.5(0x5555), the size of 
-    
-    // C is unchanged
-    A = A - Qc;
-    if (A < 0x8000) { // If renormalization is needed
-        renornalize(A);
-        renornalize(C);
-    }
+int QMCoder::MSB(int interval) {
+    return (interval & 0x8000) >> 15;
 }
 
-
-void QMCoder::afterLPS() {
-    C += A - Qc;    // point c at base of LPS subinterval
-    A = Qc;         // set interval to LPS subinterval
-    renornalize(A); // Renormalization always needed
-    renornalize(C);
-}
-
-void QMCoder::renornalize() {
-    //if we were to code an MPS, we wound not add 0.5 to C and would therefore get a zero bit after renormalization
-
-}
 
 void QMCoder::flush() {
     //empty the encoder register at the end of the entropy-coded segment

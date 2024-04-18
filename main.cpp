@@ -84,7 +84,7 @@ int main() {
 
     // Example usage
     string outstring = encoder.encode(original_img);
-    cout << outstring;
+    cout << outstring << endl << endl;
     //huffman(original_img, probability_map, img_name, process_type, false);
     //huffman(dpcm_img, dpcm_probability_map, img_name, process_type, true);
 
