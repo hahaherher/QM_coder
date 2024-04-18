@@ -19,30 +19,37 @@ QMCoder::QMCoder() {
     C = 0x0000; //1.5
     LPS = true;
     MPS = false;
+    //outstream = 0x0000;
+
+    // for decoder
+    Cx = 0;     // the portion of the code register containing the offset or pointer to the subinterval
+    Clow = 0;   //contains up to eight bits of new data
 }
 
-string QMCoder::encode(vector<unsigned char> original_img) {
-    int i = 0;
+void QMCoder::encode(vector<unsigned char> original_img, string filename) {
+    
+    //int i = 0;
     for (auto& pixel : original_img) {
         //cout << "pixel" << int(pixel) << endl;
         //break;
-        if (int(pixel) == MPS) afterMPS();
-        else afterLPS();
-        if (i == 3) break;
+        if (int(pixel) == MPS) encodeMPS(filename);
+        else encodeLPS(filename);
+        //if (i == 3) break;
         //i++;
     }
-    return outstring;
+    cout << "done!" << endl;
+    //return outstring;
 }
 
 
-void QMCoder::afterMPS() {
+void QMCoder::encodeMPS(string filename) {
     // the MPS probability estimate should ideally be 1-Qc
     // the respective subintervals are then A*Qc and A*(1-Qc)
     // the minimal value of 0.75 is for replacing the multiplacation 
     // for 0.75 <= A < 1.5, A*Qc=Qc
     // renormalization allow qm-coder to use fixed-precision integer arithmetic in the coding operations
     // when Qc is of order 0.5(0x5555), the size of 
-
+    ofstream outputFile(filename, ios::app | ios::binary);
     // C is unchanged
     A -= Qc;
     if (A < 0x8000) {   // If renormalization is needed
@@ -53,14 +60,22 @@ void QMCoder::afterMPS() {
         }
         A <<= 1;            // renorm_e()
         changeState(3);     // estimate_ & Qe(S)
-        outstring.push_back(MSB(C) + 48); // byte_out()   //push '0' = 48 or '1' = 49
+        if (outputFile.is_open()) {
+            // Write the size of the map
+            char temp_c = MSB(C) + 48;
+            outputFile.write(reinterpret_cast<const char*>(&temp_c), sizeof(temp_c));
+            outputFile.close();
+        }
+        //outstring.push_back(MSB(C) + 48); // byte_out()   //push '0' = 48 or '1' = 49
         //cout << ((C & 0x8000) >> 15);// << " MPS " << state << endl; // Output MSB of C
         C <<= 1;            // renorm_e()
     }
 }
 
 
-void QMCoder::afterLPS() {
+void QMCoder::encodeLPS(string filename) {
+    ofstream outputFile(filename, ios::app | ios::binary);
+
     A -= Qc;            // calculate MPS subinterval
     if (A >= Qc) {      // Prob(MPS) > Prob(LPS)
         C += A;         // point c at base of LPS subinterval
@@ -68,7 +83,15 @@ void QMCoder::afterLPS() {
     }
     A <<= 1;            // Renormalization always needed
     changeState(4);     //decreasing
-    outstring.push_back(MSB(C) + 48);
+    if (outputFile.is_open()) {
+        // Write the size of the map
+        char temp_c = MSB(C) + 48;
+        outputFile.write(reinterpret_cast<const char*>(&temp_c), sizeof(temp_c));
+        outputFile.close();
+    }
+    //outstream <<= 1;
+    //outstream += MSB(C);
+    //outstring.push_back(MSB(C) + 48);
     //cout << ((C & 0x8000) >> 15);// << " LPS " << state << endl; // Output MSB of C
     C <<= 1;
 }
@@ -106,7 +129,7 @@ void QMCoder::changeState(int pseudo_column) {
     }
 }
 
-int QMCoder::MSB(int interval) {
+unsigned int QMCoder::MSB(unsigned int interval) {
     return (interval & 0x8000) >> 15;
 }
 
@@ -118,20 +141,24 @@ void QMCoder::flush() {
 
 string QMCoder::decode(string compress_bitstring)
 {
+    // decodes a binary decision by determining which subinterval is pointed to by the code stream
+    // the A regeister is not large enough to contain more than the current subinterval available for decoding new symbols
+    // the code stream becomes a pointer into the current interval relative to the base of the current intreval 
+    // and is guaranteed to have a value within the current interval
+
     string binary_code;
-    long output_file_bits;
-    int output_bit = MPS;
-    int state = 0;
-    int current_mps = 0;
-    //C <<= 16;
+    
+    C = 
+    C <<= 16;
     A = 0;
     //CT = 0;
 
     for (char digit : compress_bitstring) {
-        bool digit_bool = (digit == '0') ? false : true;
+        bool Cx = (digit == '0') ? false : true;
+        
         A -= Qc;
 
-        if (C < A)
+        if (Cx < A)  //0 < MPS
         {
             if (A < 0x8000)
             {
@@ -140,13 +167,12 @@ string QMCoder::decode(string compress_bitstring)
                     binary_code.push_back(1 - MPS + 48);
                     changeState(4);
                         //if (state == 0) MPS = 1 - MPS;
-                        //state -= transitions[state];
                 }
                 else {
                     binary_code.push_back(MPS + 48);
                     changeState(3);
                 }
-                renorm_d(digit_bool);
+                renorm_d();
             }
             else {
                 binary_code.push_back(MPS + 48);
@@ -154,7 +180,7 @@ string QMCoder::decode(string compress_bitstring)
         }
         else
         {
-            if (A >= (Qc))
+            if (A >= Qc)
             {
                 C -= A;
                 A = Qc;
@@ -162,7 +188,7 @@ string QMCoder::decode(string compress_bitstring)
 
                 //if (state == 0) current_mps = 1 - current_mps;
                 //state -= next_state_lps[state];
-                    changeState(4);
+                changeState(4);
             }
             else
             {
@@ -172,15 +198,17 @@ string QMCoder::decode(string compress_bitstring)
                 //if (state < 45) state++;
                 changeState(3);
             }
-            renorm_d(digit_bool);
+            renorm_d();
         }
         
     }
     return binary_code;
 }
 
-void QMCoder::renorm_d(bool d) {
-    //cout << "d: " << d << endl;
+
+void QMCoder::renorm_d() {
+    A <<= 1;
+    C <<= 1;
 }
 
 //void huffman(vector<unsigned char> original_img, map<unsigned char, double> probability_map, string img_name, string process_type, bool is_dpcm) {

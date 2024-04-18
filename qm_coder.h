@@ -80,26 +80,31 @@ static const TransitionTable transitions[46] = {
 
 class QMCoder {
 private:
-    double Qc; // Prob(LPS)
+    unsigned int Qc; // Prob(LPS) // 32 bits
     int state;
-    int A;
-    int C;
+    unsigned int A;
+    unsigned int C;
     bool LPS, MPS;
-    string outstring;
+    unsigned int outstream;
 
-    void renorm_d(bool d);
-    int MSB(int interval);
-    void renorm_e(int interval);
+    unsigned int Cx;
+    unsigned int Clow;
+
+    void renorm_d();
+    unsigned int MSB(unsigned int interval);
+    //void renorm_e(int interval);
     void flush();
     void changeState(int pseudo_column);
+    void encodeLPS(string filename);
+    void encodeMPS(string filename);
 
 public:
     QMCoder();
 
-    string encode(vector<unsigned char> original_img);
-    string decode(string compress_bitstring);
-    void afterLPS();
-    void afterMPS();
+    //unsigned int 
+    void encode(vector<unsigned char> original_img, string filaname);
+    string decode(string compress_bitstream);
+
 };
 
 vector<unsigned char> read_raw_img(string file_name);
