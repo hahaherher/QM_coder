@@ -9,6 +9,7 @@
 //#include <queue>
 //#include <algorithm>
 #include "qm_coder.h"
+#include "gray_process.h"
 
 using namespace std;
 
@@ -48,7 +49,7 @@ int main() {
     cout << "Please choose the color type: ";
     //cin >> choice;
     //cout << endl;
-    choice = 3;
+    choice = 1;
 
     if (choice == 1) {
         process_type = "";
@@ -70,6 +71,18 @@ int main() {
 
     vector<unsigned char> original_img = read_raw_img(file_name);
     
+    //check gray code works well
+    //if (choice == 1) {
+    //    original_img = {127, 128, 126};
+    //    for (unsigned char pixel : original_img) {
+    //        bitset<8> bs4(grayEncode(pixel));
+    //        cout << int(pixel) << "&" << bs4 << " ";
+    //    }
+    //}
+    
+
+    /*bitset<8> bs2(grayEncode(original_img[1]));
+    cout << bs2 << " ";*/
 
     /*for (unsigned char pixel : original_img) {
         cout << int(pixel) << " ";
@@ -83,7 +96,8 @@ int main() {
     QMCoder encoder;
 
     // Example usage
-    encoder.encode(original_img, img_name + process_type + ".qm");
+    //encoder.encode(original_img, img_name + process_type + ".qm");
+    
     //cout << outstring << endl << endl;
     //huffman(original_img, probability_map, img_name, process_type, false);
     //huffman(dpcm_img, dpcm_probability_map, img_name, process_type, true);
