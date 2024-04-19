@@ -20,13 +20,14 @@ QMCoder::QMCoder() {
     LPS = true;
     MPS = false;
     //outstream = 0x0000;
+    outstring = "";
 
     // for decoder
     Cx = 0;     // the portion of the code register containing the offset or pointer to the subinterval
     Clow = 0;   //contains up to eight bits of new data
 }
 
-void QMCoder::encode(vector<unsigned char> original_img, string filename) {
+string QMCoder::encode(vector<unsigned char> original_img, string filename) {
     
     //int i = 0;
     for (auto& pixel : original_img) {
@@ -38,7 +39,7 @@ void QMCoder::encode(vector<unsigned char> original_img, string filename) {
         //i++;
     }
     cout << "done!" << endl;
-    //return outstring;
+    return outstring;
 }
 
 
@@ -66,7 +67,7 @@ void QMCoder::encodeMPS(string filename) {
             outputFile.write(reinterpret_cast<const char*>(&temp_c), sizeof(temp_c));
             outputFile.close();
         }
-        //outstring.push_back(MSB(C) + 48); // byte_out()   //push '0' = 48 or '1' = 49
+        outstring.push_back(MSB(C) + 48); // byte_out()   //push '0' = 48 or '1' = 49
         //cout << ((C & 0x8000) >> 15);// << " MPS " << state << endl; // Output MSB of C
         C <<= 1;            // renorm_e()
     }
@@ -91,7 +92,7 @@ void QMCoder::encodeLPS(string filename) {
     }
     //outstream <<= 1;
     //outstream += MSB(C);
-    //outstring.push_back(MSB(C) + 48);
+    outstring.push_back(MSB(C) + 48);
     //cout << ((C & 0x8000) >> 15);// << " LPS " << state << endl; // Output MSB of C
     C <<= 1;
 }
@@ -445,60 +446,4 @@ Bitstream read_binary_huff(string filename) {
     else {
         cerr << "Unable to open file." << endl;
     }
-}
-
-vector<unsigned char> read_raw_img(string file_name) {
-    ifstream rawFile(file_name, ios::in | ios::binary);
-
-    // 獲取檔案大小
-    rawFile.seekg(0, ios::end);
-    streampos fileSize = rawFile.tellg();
-    rawFile.seekg(0, ios::beg);
-
-    // 讀取所有數據到一個緩衝區
-    vector<unsigned char> original_img(fileSize);
-    rawFile.read(reinterpret_cast<char*>(original_img.data()), fileSize);
-
-    cout << "已成功讀取 " << fileSize << " 個字節的數據" << endl << endl;
-
-    // 關閉檔案
-    rawFile.close();
-
-    return original_img;
-}
-
-
-map<unsigned char, double> get_probability_map(vector<unsigned char> buffer) {
-
-    // 計算每個數值的出現次數
-    unordered_map<unsigned char, int> frequency_map;
-    for (unsigned char value : buffer) {
-        frequency_map[value]++;
-    }
-    // 計算機率分佈
-    //cout << "灰階圖中每個數值的出現機率分佈：" << endl;
-
-    map<unsigned char, double> probability_map;
-    for (const auto& pair : frequency_map) {
-        //pair.first: color value
-        //pair.second: appear frequency
-        double probability = static_cast<double>(pair.second) / buffer.size();
-        probability_map[pair.first] = probability;
-        cout << "數值 " << static_cast<int>(pair.first) << ": " << probability << endl;
-    }
-
-    return probability_map;
-}
-
-
-void print_entropy(map<unsigned char, double> probability_map) {
-    // 計算一階熵
-    double entropy = 0.0;
-    for (const auto& pair : probability_map) {
-        //pair.second: appear probability
-        entropy -= pair.second * log2(pair.second);
-    }
-
-    // 輸出結果
-    printf("First-order entropy: %0.2f bits/symbol\n", entropy);
 }

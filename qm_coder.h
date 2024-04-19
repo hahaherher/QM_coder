@@ -85,7 +85,8 @@ private:
     unsigned int A;
     unsigned int C;
     bool LPS, MPS;
-    unsigned int outstream;
+    //unsigned int outstream;
+    string outstring;
 
     unsigned int Cx;
     unsigned int Clow;
@@ -102,7 +103,7 @@ public:
     QMCoder();
 
     //unsigned int 
-    void encode(vector<unsigned char> original_img, string filaname);
+    string encode(vector<unsigned char> original_img, string filaname);
     string decode(string compress_bitstream);
 
 };

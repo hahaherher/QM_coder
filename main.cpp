@@ -13,12 +13,27 @@
 
 using namespace std;
 
-//int main() {
-//
-//    CompressFile_qm(BIT_FILE * input, BIT_FILE * output, long input_file_size);
-//    ExpandFile_qm(BIT_FILE * input, BIT_FILE * output);
-//    return 0;
-//}
+vector<unsigned char> read_raw_img(string file_name) {
+    ifstream rawFile(file_name, ios::in | ios::binary);
+
+    // 獲取檔案大小
+    rawFile.seekg(0, ios::end);
+    streampos fileSize = rawFile.tellg();
+    rawFile.seekg(0, ios::beg);
+
+    // 讀取所有數據到一個緩衝區
+    vector<unsigned char> original_img(fileSize);
+    rawFile.read(reinterpret_cast<char*>(original_img.data()), fileSize);
+
+    cout << "已成功讀取 " << fileSize << " 個字節的數據" << endl << endl;
+
+    // 關閉檔案
+    rawFile.close();
+
+    return original_img;
+}
+
+
 int main() {
     int choice;
     string img_name;
@@ -71,45 +86,49 @@ int main() {
 
     vector<unsigned char> original_img = read_raw_img(file_name);
     
-    //check gray code works well
-    //if (choice == 1) {
-    //    original_img = {127, 128, 126};
-    //    for (unsigned char pixel : original_img) {
-    //        bitset<8> bs4(grayEncode(pixel));
-    //        cout << int(pixel) << "&" << bs4 << " ";
-    //    }
-    //}
     
+    if (choice == 1) {
+        //// check gray code works well
+        //original_img = {127, 128, 126};
+        //for (unsigned char pixel : original_img) {
+        //    bitset<8> bs4(grayEncode(pixel));
+        //    cout << int(pixel) << "&" << bs4 << " ";
+        //}
+        
 
-    /*bitset<8> bs2(grayEncode(original_img[1]));
-    cout << bs2 << " ";*/
+        // without gray code
+        vector<vector<unsigned char>> bit_planes = convertToBitPlanes(original_img, false);
+        for (const auto& bit_plane : bit_planes) {
+            QMCoder encoder;
+            string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
+            cout << outstring.length() << endl;
+        }
 
-    /*for (unsigned char pixel : original_img) {
-        cout << int(pixel) << " ";
-
+        cout << endl;
+        // with gray code
+        bit_planes = convertToBitPlanes(original_img, true);
+        for (const auto& bit_plane : bit_planes) {
+            QMCoder encoder;
+            string outstring = encoder.encode(original_img, img_name + process_type + "_graycode.qm");
+            cout << outstring.length() << endl;
+        }
     }
-    map<unsigned char, double> probability_map = get_probability_map(original_img);
-    for (const auto& pair : probability_map) {
-        cout << int(pair.first) << " " << pair.second << endl;
-    }*/
-    //cout << endl;
-    QMCoder encoder;
-
-    // Example usage
-    //encoder.encode(original_img, img_name + process_type + ".qm");
+    else {
+        // encoding
+        QMCoder encoder;
+        string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
+        
+        // decoding
+        //QMCoder decoder;
+        //string uncompress_string = decoder.decode(outstring);
+        //cout << uncompress_string;
+        //unsigned long Qc = 0x0001;
+        //cout << "Qc" << Qc<<endl;
+        //int Qe = 0x0001;
+        //cout << "Qe" << Qe << endl;
+    }
     
-    //cout << outstring << endl << endl;
-    //huffman(original_img, probability_map, img_name, process_type, false);
-    //huffman(dpcm_img, dpcm_probability_map, img_name, process_type, true);
-
-    //decoding
-    //QMCoder decoder;
-    //string uncompress_string = decoder.decode(outstring);
-    //cout << uncompress_string;
-    //unsigned long Qc = 0x0001;
-    //cout << "Qc" << Qc<<endl;
-    //int Qe = 0x0001;
-    //cout << "Qe" << Qe << endl;
-
     return 0;
 }
+
+

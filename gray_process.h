@@ -13,6 +13,6 @@ using namespace std;
 unsigned char grayEncode(unsigned char byte);
 
 // Function to convert original image vector to bit-planes with Gray coding
-array<vector<unsigned char>, 8> convertToBitPlanes(const vector<unsigned char>& original_img);
+vector<vector<unsigned char>> convertToBitPlanes(const vector<unsigned char>& original_img, bool with_graycode);
 
 #endif // GRAY_PROCESS_H
