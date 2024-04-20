@@ -84,7 +84,7 @@ int main() {
     cout << "Please choose the color type: ";
     //cin >> choice;
     //cout << endl;
-    choice = 1;
+    choice = 3;
 
     if (choice == 1) {
         process_type = "";
@@ -149,10 +149,29 @@ int main() {
 
     }
     else {
-        // encoding
-        QMCoder encoder;
-        string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
+        //test
         
+        string test_string = "0100110"; //0100110->000101, 01011111->000, 00000001->010101
+        cout << test_string << endl;
+        vector<unsigned char> test_string_vec;
+        for (char test_char : test_string) {
+            test_string_vec.push_back(test_char-48);
+        }
+        QMCoder encoder;
+        string outstring = encoder.encode(test_string_vec, img_name + process_type + ".qm");
+        cout << outstring<<endl<<endl;
+
+        QMCoder decoder;
+        string uncompress_string = decoder.decode(outstring); //000101->010111, 000110->010111, 000100->010111, 001000->->010111
+        cout << uncompress_string << endl;
+        // uncompress_string = decoder.decode("000110"); //000101->010111, 000110->010111, 000100->010111, 001000->->010111
+        //cout << uncompress_string << endl;
+        // uncompress_string = decoder.decode("000100"); //000101->010111, 000110->010111, 000100->010111, 001000->->010111
+        ////cout << uncompress_string << endl;
+        // encoding
+        /*QMCoder encoder;
+        string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
+        */
         // decoding
         //QMCoder decoder;
         //string uncompress_string = decoder.decode(outstring);

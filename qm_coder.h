@@ -103,8 +103,8 @@ public:
     QMCoder();
 
     //unsigned int 
-    string encode(vector<unsigned char> original_img, string filaname);
-    string decode(string compress_bitstream);
+    string encode(vector<unsigned char> original_img, string filename);
+    string decode(string compress_bitstring);
 
 };
 
