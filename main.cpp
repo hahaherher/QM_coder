@@ -25,12 +25,32 @@ vector<unsigned char> read_raw_img(string file_name) {
     vector<unsigned char> original_img(fileSize);
     rawFile.read(reinterpret_cast<char*>(original_img.data()), fileSize);
 
-    cout << "已成功讀取 " << fileSize << " 個字節的數據" << endl << endl;
+    cout << "已成功讀取 " << int(fileSize) << " 個字節的數據" << endl << endl;
 
     // 關閉檔案
     rawFile.close();
 
     return original_img;
+}
+
+void check_bit_plane(vector<unsigned char> gray_image, vector<unsigned char> original_img) {
+    // check bit plane
+    if (gray_image == original_img) {
+        cout << "bit plane is doing well." << endl;
+    }
+    else {
+        cout << "bit plane is not doing well." << endl;
+    }
+    auto mismatch_pair = std::mismatch(gray_image.begin(), gray_image.end(), original_img.begin());
+    if (mismatch_pair.first != gray_image.end() && mismatch_pair.second != original_img.end()) {
+        std::cout << "First mismatch at index: " << std::distance(gray_image.begin(), mismatch_pair.first) << std::endl;
+        std::cout << "Value in gray_image: " << static_cast<int>(*mismatch_pair.first) << std::endl;
+        std::cout << "Value in original_img: " << static_cast<int>(*mismatch_pair.second) << std::endl;
+    }
+    else {
+        std::cout << "Vectors are equal" << std::endl;
+    }
+
 }
 
 
@@ -95,16 +115,27 @@ int main() {
         //    cout << int(pixel) << "&" << bs4 << " ";
         //}
         
-
         // without gray code
+        // encode 
         vector<vector<unsigned char>> bit_planes = convertToBitPlanes(original_img, false);
         for (const auto& bit_plane : bit_planes) {
             QMCoder encoder;
             string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
             cout << outstring.length() << endl;
         }
+        
+        //// decode 
+        //vector<string> compressed_outstrings = read_qm();
+        //vector<vector<unsigned char>> uncompressed_bit_planes;
+        //for (const auto& compressed_outstring : compressed_outstrings) {
+        //    QMCoder decoder;
+        //    vector<unsigned char> uncompressed_bit_plane = decoder.decode(compressed_outstring);
+        //    uncompressed_bit_planes.push_back(uncompressed_bit_plane);
+        //}
+        //vector<unsigned char> gray_image = combineBitPlanes(uncompressed_bit_planes);
+        //cout << endl;
+        //check_bit_plane(gray_image, original_img);
 
-        cout << endl;
         // with gray code
         bit_planes = convertToBitPlanes(original_img, true);
         for (const auto& bit_plane : bit_planes) {
@@ -112,6 +143,10 @@ int main() {
             string outstring = encoder.encode(original_img, img_name + process_type + "_graycode.qm");
             cout << outstring.length() << endl;
         }
+
+        // decoding
+        
+
     }
     else {
         // encoding

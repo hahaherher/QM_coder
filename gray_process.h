@@ -14,5 +14,6 @@ unsigned char grayEncode(unsigned char byte);
 
 // Function to convert original image vector to bit-planes with Gray coding
 vector<vector<unsigned char>> convertToBitPlanes(const vector<unsigned char>& original_img, bool with_graycode);
+vector<unsigned char> combineBitPlanes(vector<vector<unsigned char>> bit_planes);
 
 #endif // GRAY_PROCESS_H
