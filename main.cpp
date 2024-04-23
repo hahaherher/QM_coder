@@ -10,7 +10,8 @@
 //#include <algorithm>
 #include "qm_coder.h"
 #include "gray_process.h"
-
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace std;
 
@@ -66,7 +67,7 @@ int main() {
     cout << "Please choose the image: ";
     //cin >> choice;
     //cout << endl;
-    choice = 1;
+    choice = 2;
 
     if (choice == 1) {
         img_name = "lena";
@@ -114,7 +115,6 @@ int main() {
     //
     
     vector<unsigned char> original_img = read_raw_img(raw_name);
-    
 
     if (choice == 1) {
         //// check gray code works well
@@ -127,7 +127,7 @@ int main() {
         // without gray code
         // encode 
         QMCoder encoder; 
-        qm_name = img_name + process_type + ".qm";
+        qm_name = "./results/"+img_name + process_type + ".qm";
         vector<vector<bool>> bit_planes = convertToBitPlanes(original_img, false);
         encoder.encode(bit_planes, qm_name, original_img.size());
 
@@ -138,7 +138,7 @@ int main() {
 
         
         // decode 
-        decode_raw_name =  img_name + process_type + "_decode.raw";
+        decode_raw_name = "./results/"+img_name + process_type + "_decode.raw";
         QMCoder decoder;
         decoder.decode_bitplanes(qm_name, decode_raw_name);
 
@@ -157,7 +157,7 @@ int main() {
         // with gray code
         // encode 
         QMCoder encoder2;
-        qm_name = img_name + process_type + "_graycode.qm";
+        qm_name = "./results/" + img_name + process_type + "_graycode.qm";
         bit_planes = convertToBitPlanes(original_img, true);
         encoder2.encode(bit_planes, qm_name, original_img.size());
 
@@ -167,20 +167,20 @@ int main() {
         check_bit_plane(gray_image, original_img);
 
         // decode 
-        decode_raw_name = img_name + process_type + "_graycode_decode.raw";
+        decode_raw_name = "./results/" + img_name + process_type + "_graycode_decode.raw";
         QMCoder decoder2;
         decoder2.decode_bitplanes(qm_name, decode_raw_name);
 
     }
     else {        
         // encoding
-        qm_name = img_name + process_type + ".qm";
+        qm_name = "./results/" + img_name + process_type + ".qm";
         QMCoder encoder;
         //string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
         encoder.encode(raw_name, qm_name, original_img.size());
         
         // decoding
-        decode_raw_name =  img_name + process_type + "_decode.raw";
+        decode_raw_name = "./results/" + img_name + process_type + "_decode.raw";
         QMCoder decoder;
         decoder.decode(qm_name, decode_raw_name);
 
