@@ -11,6 +11,7 @@
 #include <map>
 #include <queue>
 #include <algorithm>
+#include "qm_supochi/bitio.h"
 
 using namespace std;
 
@@ -94,10 +95,23 @@ private:
     void renorm_d();
     unsigned int MSB(unsigned int interval);
     //void renorm_e(int interval);
-    void flush();
+    //void flush();
     void changeState(int pseudo_column);
     void encodeLPS(string filename);
     void encodeMPS(string filename);
+
+    //from supochi
+    unsigned char CT;
+    unsigned char code_buffer;
+    unsigned char is_data_in_code_buffer;
+    unsigned long SC;
+    void encodeMPS(BIT_FILE* output);
+    void encodeLPS(BIT_FILE* output);
+    void renorm_e(BIT_FILE* output);
+    void flush(BIT_FILE* output);
+    void byte_out(BIT_FILE* output);
+    void byte_in(BIT_FILE* input);
+    void renorm_d(BIT_FILE* input);
 
 public:
     QMCoder();
@@ -106,6 +120,9 @@ public:
     string encode(vector<unsigned char> original_img, string filename);
     string decode(string compress_bitstring);
 
+    //from supochi
+    void encode(string raw_name, string qm_name, long img_size);
+    void decode(string qm_name, string decode_raw_name);
 };
 
 vector<unsigned char> read_raw_img(string file_name);

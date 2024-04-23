@@ -11,6 +11,7 @@
 #include "qm_coder.h"
 #include "gray_process.h"
 
+
 using namespace std;
 
 vector<unsigned char> read_raw_img(string file_name) {
@@ -101,12 +102,22 @@ int main() {
     }
 
     //根據使用者選擇的檔案名稱和處理方式執行相應的處理
-    string file_name = data_path + img_name + process_type + ".raw";
-    cout << file_name << " Loading..." << endl;
+    string raw_name = data_path + img_name + process_type + ".raw"; //"./Data/RAW/lena_decode.raw";
+    cout << raw_name << " Loading..." << endl;
+    string qm_name;
+    string decode_raw_name;
 
-    vector<unsigned char> original_img = read_raw_img(file_name);
+    // use bitfile
+    //char* raw_name = new char[file_name.length() + 1]; 
+    //errno_t errcode = strcpy_s(raw_name, file_name.length() + 1, file_name.c_str());
+    ////strcpy(raw_name, file_name.c_str());
+    //
     
+    vector<unsigned char> original_img = read_raw_img(raw_name);
+
+
     
+
     if (choice == 1) {
         //// check gray code works well
         //original_img = {127, 128, 126};
@@ -140,46 +151,41 @@ int main() {
         bit_planes = convertToBitPlanes(original_img, true);
         for (const auto& bit_plane : bit_planes) {
             QMCoder encoder;
-            string outstring = encoder.encode(original_img, img_name + process_type + "_graycode.qm");
-            cout << outstring.length() << endl;
+            //string outstring = encoder.encode(original_img, img_name + process_type + "_graycode.qm");
+            //cout << outstring.length() << endl;
+            
         }
 
         // decoding
         
 
     }
-    else {
-        //test
-        
-        string test_string = "0100110"; //0100110->000101, 01011111->000, 00000001->010101
-        cout << test_string << endl;
-        vector<unsigned char> test_string_vec;
-        for (char test_char : test_string) {
-            test_string_vec.push_back(test_char-48);
-        }
-        QMCoder encoder;
-        string outstring = encoder.encode(test_string_vec, img_name + process_type + ".qm");
-        cout << outstring<<endl<<endl;
-
-        QMCoder decoder;
-        string uncompress_string = decoder.decode(outstring); //000101->010111, 000110->010111, 000100->010111, 001000->->010111
-        cout << uncompress_string << endl;
-        // uncompress_string = decoder.decode("000110"); //000101->010111, 000110->010111, 000100->010111, 001000->->010111
-        //cout << uncompress_string << endl;
-        // uncompress_string = decoder.decode("000100"); //000101->010111, 000110->010111, 000100->010111, 001000->->010111
-        ////cout << uncompress_string << endl;
+    else {        
         // encoding
-        /*QMCoder encoder;
-        string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
-        */
+        qm_name = img_name + process_type + ".qm";
+        QMCoder encoder;
+        //string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
+        encoder.encode(raw_name, qm_name, original_img.size());
+        
         // decoding
-        //QMCoder decoder;
+        decode_raw_name =  img_name + process_type + "_decode.raw";
+        QMCoder decoder;
+        decoder.decode(qm_name, decode_raw_name);
+
         //string uncompress_string = decoder.decode(outstring);
         //cout << uncompress_string;
-        //unsigned long Qc = 0x0001;
-        //cout << "Qc" << Qc<<endl;
-        //int Qe = 0x0001;
-        //cout << "Qe" << Qe << endl;
+
+    }
+
+    vector<unsigned char> original_raw = read_raw_img(raw_name);
+    cout << decode_raw_name;
+    vector<unsigned char> decode_raw = read_raw_img(decode_raw_name);
+    //vector<unsigned char> decode_raw = read_raw_img("lena_b_hong.raw");
+    if (original_raw == decode_raw) {
+        cout << "the same!" << endl;
+    }
+    else {
+        cout << "not the same!" << endl;
     }
     
     return 0;

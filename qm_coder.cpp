@@ -10,6 +10,7 @@
 //#include <algorithm>
 #include "qm_coder.h"
 
+
 using namespace std;
 
 QMCoder::QMCoder() {
@@ -42,7 +43,75 @@ string QMCoder::encode(vector<unsigned char> original_img, string filename) {
     return outstring;
 }
 
+char* str2chararr(string str_name) {
+    char* char_name = new char[str_name.length() + 1];
+    errno_t errcode2 = strcpy_s(char_name, str_name.length() + 1, str_name.c_str());
+    return char_name;
+}
 
+// supochi
+void QMCoder::encode(string raw_name, string qm_name, long img_size) {
+    BIT_FILE* input = OpenInputBitFile(str2chararr(raw_name));
+    BIT_FILE* output = OpenOutputBitFile(str2chararr(qm_name));
+    OutputBits(output, img_size, 32);
+
+    int new_bit; 
+    int stuffing = 0;
+    CT = 11;
+    is_data_in_code_buffer = 0;
+    SC = 0;
+    do {
+        new_bit = InputBit(input);
+        if (new_bit == EOF) { new_bit = 0; stuffing++; }
+
+        //cout << "pixel" << int(pixel) << endl;
+        //break;
+        if (new_bit == MPS) encodeMPS(output);
+        else encodeLPS(output);
+        //if (i == 3) break;
+        //i++;
+    } while (stuffing < 20);
+    flush(output);
+    
+    CloseInputBitFile(input);
+    CloseOutputBitFile(output);
+    cout << "done!" << endl;
+}
+
+// supochi
+void QMCoder::encodeMPS(BIT_FILE* output) {
+    // the MPS probability estimate should ideally be 1-Qc
+    // the respective subintervals are then A*Qc and A*(1-Qc)
+    // the minimal value of 0.75 is for replacing the multiplacation 
+    // for 0.75 <= A < 1.5, A*Qc=Qc
+    // renormalization allow qm-coder to use fixed-precision integer arithmetic in the coding operations
+    // when Qc is of order 0.5(0x5555), the size of 
+    // C is unchanged
+    A -= Qc;
+    if (A < 0x8000) {   // If renormalization is needed
+        // conditional exchange
+        if (A < Qc) {   // Prob(MPS) < Prob(LPS)
+            C += A;     // point to LPS subinterval base
+            A = Qc;     // set interval to LPS subinterval
+        }
+        changeState(3);     // estimate_ & Qe(S)
+        renorm_e(output);
+    }
+}
+
+// supochi
+void QMCoder::encodeLPS(BIT_FILE* output) {
+
+    A -= Qc;            // calculate MPS subinterval
+    if (A >= Qc) {      // Prob(MPS) > Prob(LPS)
+        C += A;         // point c at base of LPS subinterval
+        A = Qc;         // set interval to LPS subinterval
+    }
+    changeState(4);     //decreasing
+    renorm_e(output);
+}
+
+//mine
 void QMCoder::encodeMPS(string filename) {
     // the MPS probability estimate should ideally be 1-Qc
     // the respective subintervals are then A*Qc and A*(1-Qc)
@@ -72,8 +141,7 @@ void QMCoder::encodeMPS(string filename) {
         C <<= 1;            // renorm_e()
     }
 }
-
-
+//mine
 void QMCoder::encodeLPS(string filename) {
     ofstream outputFile(filename, ios::app | ios::binary);
 
@@ -96,7 +164,7 @@ void QMCoder::encodeLPS(string filename) {
     //cout << ((C & 0x8000) >> 15);// << " LPS " << state << endl; // Output MSB of C
     C <<= 1;
 }
-
+//mine
 void QMCoder::changeState(int pseudo_column) {
     // estimate_MPS
     //cout << int(transitions[0].increase_state);
@@ -134,6 +202,60 @@ unsigned int QMCoder::MSB(unsigned int interval) {
     return (interval & 0x8000) >> 15;
 }
 
+//supochi
+void QMCoder::renorm_e(BIT_FILE* output)
+{
+    do
+    {
+        A <<= 1;
+        C <<= 1;
+        CT--;
+        if (CT == 0) { byte_out(output); CT = 8; } //byte_out??
+    } while (A < 0x8000);//?
+}
+
+//supochi
+void QMCoder::flush(BIT_FILE* output)
+{
+    unsigned long T;
+
+    T = (C + A - 1) & 0xffff0000;
+    if (T < C) T += 0x8000;
+    C = (T << CT);
+    byte_out(output);
+    C <<= 8;
+    byte_out(output);
+}
+//supochi
+void QMCoder::byte_out(BIT_FILE* output)
+{                            /* Never put 0xff in code_buffer */
+    unsigned long T;
+
+    T = (C >> 19);
+
+    if (T > 0xff)
+    {
+        code_buffer += 1;
+        if (is_data_in_code_buffer) OutputBits(output, code_buffer, 8);
+        /*if(code_buffer == 0xff) fputc(0,output);*/
+        for (; SC > 0; SC--) OutputBits(output, 0, 8);
+        if (SC != 0) printf("Error: SC != 0\n");
+        code_buffer = (unsigned char)(T & 0x000000ff);
+        /*printf("Carry produced! \n");*/
+    }
+    if (T < 0xff)
+    {
+        if (is_data_in_code_buffer) OutputBits(output, code_buffer, 8);
+        for (; SC > 0; SC--) { OutputBits(output, 0xff, 8); /*fputc(0,output);*/ }
+        if (SC != 0) printf("Error: SC != 0\n");
+        code_buffer = (unsigned char)(T & 0x000000ff);
+    }
+    if (T == 0xff) SC += 1;
+    C &= 0x0007ffff;
+    is_data_in_code_buffer = 1;
+}
+
+
 
 //void QMCoder::flush() {
 //    //empty the encoder register at the end of the entropy-coded segment
@@ -153,7 +275,7 @@ string QMCoder::decode(string compress_bitstring)
     // 将二进制字符串转换为对应的无符号整数
     C = bitset<8>(compress_bitstring).to_ulong();
     unsigned int output_file_bits = 8 * compress_bitstring.length();
-    cout << output_file_bits;
+    //cout << output_file_bits;
     C <<= 16;
     A = 0;
     //CT = 0;
@@ -215,4 +337,108 @@ string QMCoder::decode(string compress_bitstring)
 void QMCoder::renorm_d() {
     A <<= 1;
     C <<= 1;
+}
+
+//supochi
+void QMCoder::decode(string qm_name, string decode_raw_name)
+{
+    // decodes a binary decision by determining which subinterval is pointed to by the code stream
+    // the A regeister is not large enough to contain more than the current subinterval available for decoding new symbols
+    // the code stream becomes a pointer into the current interval relative to the base of the current intreval 
+    // and is guaranteed to have a value within the current interval
+    
+    BIT_FILE* input = OpenInputBitFile(str2chararr(qm_name));
+    BIT_FILE* output = OpenOutputBitFile(str2chararr(decode_raw_name));
+    int output_bit;
+    long output_file_bits = 8 * ((long)InputBits(input, 32));
+    //cout << output_file_bits;
+
+    C = InputBits(input, 16);
+    C <<= 16;
+    A = 0;
+    CT = 0;
+
+    for (; output_file_bits > 0; output_file_bits--) {
+
+        A -= (Qc << 16);
+        output_bit = MPS;
+
+        if (C < A)  //0 < MPS
+        {
+            if (A < 0x80000000)
+            {
+                if (A < (Qc << 16))
+                {
+                    //LPS
+                    output_bit = (1 - MPS);
+                    changeState(4);
+                }
+                else {
+                    changeState(3);
+                }
+                renorm_d(input);
+            }
+        }
+        else
+        {
+            if (A >= (Qc << 16))
+            {
+                //LPS
+                C -= A;
+                A = (Qc << 16);
+                output_bit = (1 - MPS);
+
+                changeState(4);
+            }
+            else
+            {
+                C -= A;
+                A = (Qc << 16);
+                changeState(3);
+            }
+            renorm_d(input);
+        }
+        OutputBit(output, output_bit);
+    }
+    CloseInputBitFile(input);
+    CloseOutputBitFile(output);
+    cout << "done!" << endl;
+}
+
+//supochi
+void QMCoder::renorm_d(BIT_FILE* input)
+{
+    do
+    {
+        if (CT == 0) { byte_in(input); CT = 8; }
+        A <<= 1;
+        C <<= 1;
+        CT--;
+    } while (A < 0x80000000);
+}
+
+//supochi
+void QMCoder::byte_in(BIT_FILE* input)
+{
+    int input_buffer;
+
+    /*  if(is_terminate) return;
+
+      if((input_buffer = InputBits(input,8))==0xff)
+      {
+          if((input_buffer = InputBits(input,8)) == 0)
+             C |= 0x0000ff00;
+          else
+          {
+              C &= 0xffff0000;
+              is_terminate = 1;
+          }
+      }
+      else C += (input_buffer << 8);
+    */
+    input_buffer = InputBits(input, 8);
+
+    if (input_buffer == EOF) input_buffer = 0;
+    C += (input_buffer << 8);
+    CT = 8;
 }
