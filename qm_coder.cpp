@@ -81,12 +81,9 @@ void QMCoder::encode(vector<vector<bool>> bitplanes, string qm_name, long img_si
             }
             j++;
 
-            //cout << "pixel" << int(pixel) << endl;
-            //break;
             if (new_bit == MPS) encodeMPS(output);
             else encodeLPS(output);
-            //if (i == 3) break;
-            //i++;
+
         } while (stuffing < 20);
         flush(output); //output remain bits
         printf("%d-bit plane length: %d Bytes\n", i, output->byte_count);

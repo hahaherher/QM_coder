@@ -25,7 +25,7 @@ vector<vector<bool>> convertToBitPlanes(const vector<unsigned char>& original_im
         // Iterate over each bit in the Gray-coded byte
         for (int i = 0; i < 8; ++i) {
             // Extract i-th bit and store it in corresponding bit-plane
-            bool binary_bit = new_pixel >> (7 - i) & 0x0001;
+            bool binary_bit = (new_pixel >> (7 - i)) & 0x0001;
             bit_planes[i].push_back(binary_bit);
         }
     }
