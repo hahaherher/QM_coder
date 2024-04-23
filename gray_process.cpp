@@ -11,12 +11,12 @@ unsigned char grayEncode(unsigned char byte) {
 }
 
 // Function to convert original image vector to bit-planes with Gray coding
-vector<vector<unsigned char>> convertToBitPlanes(const vector<unsigned char>& original_img, bool with_graycode) {
+vector<vector<bool>> convertToBitPlanes(const vector<unsigned char>& original_img, bool with_graycode) {
     // Initialize bit-planes array
-    vector<vector<unsigned char>> bit_planes(8);
+    vector<vector<bool>> bit_planes(8);
 
     // Iterate over each byte in original image vector
-    for (const auto& pixel : original_img) {
+    for (const unsigned char& pixel : original_img) {
         // Apply Gray coding to the byte
         unsigned char new_pixel = pixel;
         if (with_graycode) {
@@ -25,7 +25,8 @@ vector<vector<unsigned char>> convertToBitPlanes(const vector<unsigned char>& or
         // Iterate over each bit in the Gray-coded byte
         for (int i = 0; i < 8; ++i) {
             // Extract i-th bit and store it in corresponding bit-plane
-            bit_planes[i].push_back(new_pixel >> (7-i) & 0x0001);
+            bool binary_bit = new_pixel >> (7 - i) & 0x0001;
+            bit_planes[i].push_back(binary_bit);
         }
     }
 
@@ -38,7 +39,7 @@ vector<vector<unsigned char>> convertToBitPlanes(const vector<unsigned char>& or
 }
 
 
-vector<unsigned char> combineBitPlanes(vector<vector<unsigned char>> bit_planes) {
+vector<unsigned char> combineBitPlanes(vector<vector<bool>> bit_planes) {
     vector<unsigned char> grayscale_image;
     // 合成位平面
     for (int y = 0; y < bit_planes[0].size(); ++y) {
