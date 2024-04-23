@@ -9,7 +9,7 @@
 //#include <queue>
 //#include <algorithm>
 #include "qm_coder.h"
-
+#include "gray_process.h"
 
 using namespace std;
 
@@ -21,11 +21,11 @@ QMCoder::QMCoder() {
     LPS = true;
     MPS = false;
     //outstream = 0x0000;
-    outstring = "";
+    //outstring = "";
 
     // for decoder
-    Cx = 0;     // the portion of the code register containing the offset or pointer to the subinterval
-    Clow = 0;   //contains up to eight bits of new data
+    //Cx = 0;     // the portion of the code register containing the offset or pointer to the subinterval
+    //Clow = 0;   //contains up to eight bits of new data
 }
 
 string QMCoder::encode(vector<unsigned char> original_img, string filename) {
@@ -49,6 +49,54 @@ char* str2chararr(string str_name) {
     return char_name;
 }
 
+// supochi & my bit plane
+void QMCoder::encode(vector<vector<bool>> bitplanes, string qm_name, long img_size) {
+    
+    BIT_FILE* output = OpenOutputBitFile(str2chararr(qm_name));
+    OutputBits(output, img_size*8, 32);
+
+    for (int i = 0; i < bitplanes.size(); i++) {
+        vector<bool> bitplane = bitplanes[i];
+        int new_bit;
+        int stuffing = 0;
+        CT = 11;
+        is_data_in_code_buffer = 0;
+        SC = 0;
+        
+        Qc = 0x59EB;//23019=2^12*5+2^8*9+2^4*14*2^0*11
+        state = 0;
+        A = 0x10000; //2^16=65536
+        C = 0x0000; //0
+        LPS = true;
+        MPS = false;
+
+        int j = 0;
+        do{
+            if (j < bitplane.size()) { 
+                new_bit = bitplane[j];
+            }
+            else { 
+                new_bit = 0; 
+                stuffing++;  //output 0s at last
+            }
+            j++;
+
+            //cout << "pixel" << int(pixel) << endl;
+            //break;
+            if (new_bit == MPS) encodeMPS(output);
+            else encodeLPS(output);
+            //if (i == 3) break;
+            //i++;
+        } while (stuffing < 20);
+        flush(output); //output remain bits
+        printf("%d-bit plane length: %d Bytes\n", i, output->byte_count);
+        output->byte_count = 0;
+    }
+
+    CloseOutputBitFile(output);
+    cout << "done!" << endl;
+}
+
 // supochi
 void QMCoder::encode(string raw_name, string qm_name, long img_size) {
     BIT_FILE* input = OpenInputBitFile(str2chararr(raw_name));
@@ -62,6 +110,7 @@ void QMCoder::encode(string raw_name, string qm_name, long img_size) {
     SC = 0;
     do {
         new_bit = InputBit(input);
+
         if (new_bit == EOF) { new_bit = 0; stuffing++; }
 
         //cout << "pixel" << int(pixel) << endl;
@@ -337,6 +386,94 @@ string QMCoder::decode(string compress_bitstring)
 void QMCoder::renorm_d() {
     A <<= 1;
     C <<= 1;
+}
+
+// supochi & my bit plane
+vector<vector<bool>>  QMCoder::decode_bitplanes(string qm_name, string decode_raw_name)
+{
+    // decodes a binary decision by determining which subinterval is pointed to by the code stream
+    // the A regeister is not large enough to contain more than the current subinterval available for decoding new symbols
+    // the code stream becomes a pointer into the current interval relative to the base of the current intreval 
+    // and is guaranteed to have a value within the current interval
+
+    vector<vector<bool>> bit_planes;
+    BIT_FILE* input = OpenInputBitFile(str2chararr(qm_name));
+    BIT_FILE* output = OpenOutputBitFile(str2chararr(decode_raw_name));
+    int output_bit;
+    long output_file_bits = 8 * ((long)InputBits(input, 32));
+    //cout << output_file_bits;
+
+    for (int i = 0; i < 8; i++) {
+        Qc = 0x59EB;//23019=2^12*5+2^8*9+2^4*14*2^0*11
+        state = 0;
+        LPS = true;
+        MPS = false;
+
+        C = InputBits(input, 16);
+        C <<= 16;
+        A = 0;
+        CT = 0;
+        vector<bool> bit_plane;
+        vector<bool> *output_plane = &bit_plane;
+
+        for (long temp_output_file_bits = output_file_bits/8; temp_output_file_bits > 0; temp_output_file_bits--) {
+
+            A -= (Qc << 16);
+            output_bit = MPS;
+
+            if (C < A)  //0 < MPS
+            {
+                if (A < 0x80000000)
+                {
+                    if (A < (Qc << 16))
+                    {
+                        //LPS
+                        output_bit = (1 - MPS);
+                        changeState(4);
+                    }
+                    else {
+                        changeState(3);
+                    }
+                    renorm_d(input);
+                }
+            }
+            else
+            {
+                if (A >= (Qc << 16))
+                {
+                    //LPS
+                    C -= A;
+                    A = (Qc << 16);
+                    output_bit = (1 - MPS);
+
+                    changeState(4);
+                }
+                else
+                {
+                    C -= A;
+                    A = (Qc << 16);
+                    changeState(3);
+                }
+                renorm_d(input);
+            }
+            OutputBit(output_plane, output, output_bit);
+        }
+        bit_planes.push_back(bit_plane);
+    }
+    CloseInputBitFile(input);
+    CloseOutputBitFile(output);
+    cout << "done!" << endl;
+    write_gray_img(bit_planes, decode_raw_name);
+    return bit_planes;    
+}
+
+void QMCoder::write_gray_img(vector<vector<bool>> decoded_bit_planes, string decode_raw_name) {
+    vector<unsigned char> gray_img = combineBitPlanes(decoded_bit_planes);
+    BIT_FILE* output = OpenOutputBitFile(str2chararr(decode_raw_name));
+    for (unsigned char& pixel: gray_img) {
+        putc(pixel, output->file);
+    }
+    CloseOutputBitFile(output);
 }
 
 //supochi

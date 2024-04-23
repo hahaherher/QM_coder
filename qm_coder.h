@@ -123,6 +123,11 @@ public:
     //from supochi
     void encode(string raw_name, string qm_name, long img_size);
     void decode(string qm_name, string decode_raw_name);
+    //bitplane
+    void encode(vector<vector<bool>> bitplanes, string qm_name, long img_size);
+    vector<vector<bool>> decode_bitplanes(string qm_name, string decode_raw_name);
+    void write_gray_img(vector<vector<bool>> decoded_bit_planes, string decode_raw_name);
+
 };
 
 vector<unsigned char> read_raw_img(string file_name);

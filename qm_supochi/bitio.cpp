@@ -26,6 +26,8 @@ BIT_FILE* OpenOutputBitFile(char* name)
 	bit_file->rack = 0;
 	bit_file->mask = 0x80;
 	bit_file->pacifier_counter = 0;
+	bit_file->byte_count = 0;
+
 	return(bit_file);
 }
 
@@ -69,6 +71,25 @@ void OutputBit(BIT_FILE* bit_file, int bit)
 			fatal_error("Fatal error in OutputBit!\n");
 		else if ((bit_file->pacifier_counter++ & PACIFIER_COUNT) == 0)
 			putc('.', stdout);
+			bit_file->byte_count += 1;
+		bit_file->rack = 0;
+		bit_file->mask = 0x80;
+	}
+}
+
+//for bit plane
+void OutputBit(vector<bool>* bit_plane, BIT_FILE* bit_file, int bit)
+{
+	if (bit)
+		bit_file->rack |= bit_file->mask;
+	bit_file->mask >>= 1;
+	if (bit_file->mask == 0) {
+		if (putc(bit_file->rack, bit_file->file) != bit_file->rack)
+			fatal_error("Fatal error in OutputBit!\n");
+		else if ((bit_file->pacifier_counter++ & PACIFIER_COUNT) == 0)
+			putc('.', stdout);
+			bit_plane->push_back(bit_file->rack);
+			bit_file->byte_count += 1;
 		bit_file->rack = 0;
 		bit_file->mask = 0x80;
 	}
@@ -89,8 +110,10 @@ void OutputBits(BIT_FILE* bit_file, unsigned long code, int count)
 				fatal_error("Fatal error in OutputBit!\n");
 			else if ((bit_file->pacifier_counter++ & PACIFIER_COUNT) == 0)
 				putc('.', stdout);
+				bit_file->byte_count += 1;
 			bit_file->rack = 0;
 			bit_file->mask = 0x80;
+
 		}
 		mask >>= 1;
 	}
@@ -105,7 +128,7 @@ int InputBit(BIT_FILE* bit_file)
 			//fatal_error("Fatal error in InputBit!\n");
 			return EOF;
 		if ((bit_file->pacifier_counter++ & PACIFIER_COUNT) == 0)
-			putc('.', stdout);
+			cout << ".";
 	}
 	value = bit_file->rack & bit_file->mask;
 	bit_file->mask >>= 1;
@@ -113,6 +136,24 @@ int InputBit(BIT_FILE* bit_file)
 		bit_file->mask = 0x80;
 	return (value ? 1 : 0);
 }
+
+
+////bit plane input
+//int InputPlaneBit(BIT_FILE* bit_file, int pos)
+//{
+//	int value;
+//
+//	bit_file->rack = getc(bit_file->file);
+//	if (bit_file->rack == EOF)
+//		//fatal_error("Fatal error in InputBit!\n");
+//		return EOF;
+//	if ((bit_file->pacifier_counter++ & PACIFIER_COUNT) == 0)
+//		cout << ".";
+//	
+//	value = (bit_file->rack >> (8-pos)) & 0x01;
+//
+//	return value;
+//}
 
 unsigned long InputBits(BIT_FILE* bit_file, int bit_count)
 {

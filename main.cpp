@@ -85,7 +85,7 @@ int main() {
     cout << "Please choose the color type: ";
     //cin >> choice;
     //cout << endl;
-    choice = 3;
+    choice = 1;
 
     if (choice == 1) {
         process_type = "";
@@ -114,8 +114,6 @@ int main() {
     //
     
     vector<unsigned char> original_img = read_raw_img(raw_name);
-
-
     
 
     if (choice == 1) {
@@ -128,14 +126,23 @@ int main() {
         
         // without gray code
         // encode 
-        vector<vector<unsigned char>> bit_planes = convertToBitPlanes(original_img, false);
-        for (const auto& bit_plane : bit_planes) {
-            QMCoder encoder;
-            string outstring = encoder.encode(original_img, img_name + process_type + ".qm");
-            cout << outstring.length() << endl;
-        }
+        QMCoder encoder; 
+        qm_name = img_name + process_type + ".qm";
+        vector<vector<bool>> bit_planes = convertToBitPlanes(original_img, false);
+        encoder.encode(bit_planes, qm_name, original_img.size());
+
+        // check bit plane qork well
+        /*vector<unsigned char> gray_image = combineBitPlanes(bit_planes);
+        cout << endl;
+        check_bit_plane(gray_image, original_img);*/
+
         
-        //// decode 
+        // decode 
+        decode_raw_name =  img_name + process_type + "_decode.raw";
+        QMCoder decoder;
+        decoder.decode_bitplanes(qm_name, decode_raw_name);
+
+
         //vector<string> compressed_outstrings = read_qm();
         //vector<vector<unsigned char>> uncompressed_bit_planes;
         //for (const auto& compressed_outstring : compressed_outstrings) {
@@ -148,16 +155,21 @@ int main() {
         //check_bit_plane(gray_image, original_img);
 
         // with gray code
+        // encode 
+        QMCoder encoder2;
+        qm_name = img_name + process_type + "_graycode.qm";
         bit_planes = convertToBitPlanes(original_img, true);
-        for (const auto& bit_plane : bit_planes) {
-            QMCoder encoder;
-            //string outstring = encoder.encode(original_img, img_name + process_type + "_graycode.qm");
-            //cout << outstring.length() << endl;
-            
-        }
+        encoder2.encode(bit_planes, qm_name, original_img.size());
 
-        // decoding
-        
+        // check bit plane qork well
+        vector<unsigned char> gray_image = combineBitPlanes(bit_planes);
+        cout << endl;
+        check_bit_plane(gray_image, original_img);
+
+        // decode 
+        decode_raw_name = img_name + process_type + "_graycode_decode.raw";
+        QMCoder decoder2;
+        decoder2.decode_bitplanes(qm_name, decode_raw_name);
 
     }
     else {        
